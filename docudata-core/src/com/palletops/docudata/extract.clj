@@ -41,8 +41,8 @@
         val (var-get v)]
     (cond
      (:macro m) :macro
-     (:arglists m) :fn
      (:protocol m) :protocol-method
+     (:arglists m) :fn
      (and (map? val) (:on-interface val)) :protocol
      (instance? clojure.lang.MultiFn val) :multi-method
      (.contains (str (:name m)) "proxy$") :proxy
