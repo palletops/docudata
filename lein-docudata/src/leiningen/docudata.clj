@@ -7,7 +7,7 @@
 
 (def profiles
   {::docudata
-   {:dependencies ^:displace ['com.palletops/docudata "0.1.0-SNAPSHOT"]}})
+   {:dependencies [['com.palletops/docudata "0.1.0-SNAPSHOT"]]}})
 
 (defn docudata-options
   [project]
@@ -24,8 +24,8 @@
                   project)
         project (-> project
                     (add-profiles profiles)
+                    (merge-profiles [::docudata])
                     (unmerge-profiles [:default]))]
-    (println "project " project)
     (eval-in-project
      project
      `(com.palletops.docudata/generate

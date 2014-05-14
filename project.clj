@@ -4,4 +4,7 @@
   :url "https://github.com/palletops/docudata"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :plugins [[lein-modules "0.3.1"]])
+  :plugins [[lein-modules "0.3.1"]]
+  :aliases {"install" ["modules" "install"]
+            "deploy" ["modules" "deploy"]
+            "clean" ["modules" "clean"]})
