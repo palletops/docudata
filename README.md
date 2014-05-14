@@ -2,9 +2,9 @@
 
 Extract clojure source code documentation to EDN.
 
-## Usage
-
-FIXME
+The project consists of a [leningen plugin](lein-docudata/README.md)
+and a [library](docudata-core/README.md), which the plugin puts on
+your project's classpath.
 
 ## License
 

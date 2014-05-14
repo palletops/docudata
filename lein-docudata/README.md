@@ -14,6 +14,14 @@ project.
 
     $ lein docudata
 
+## Configuration
+
+The `:docudata` profile is automatically added by the `docudata` task,
+and can be used to customise the output file path using the
+`:output-file` key (defaults to `target/docudata.edn`) and input
+source paths using the `:source-paths` key (defaults to your projects
+`:source-paths`).
+
 ## License
 
 Copyright © 2014 Hugo Duncan
