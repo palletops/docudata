@@ -61,6 +61,22 @@
   [m ks]
   (apply dissoc m ks))
 
+
+(def schema-explain
+  (delay (ns-resolve 'schema.core 'explain)))
+
+(defn explain-sig
+  "Call explain on the elements of a :sig."
+  [sig]
+  (->
+   (mapv (fn [s]
+           (mapv (fn [x]
+                   (if (= x ':-)
+                     x
+                     (@schema-explain x)))
+                 s))
+         sig)))
+
 (defn var-data
   "Return documentation data for a var."
   [v options]
@@ -68,6 +84,9 @@
       (assoc :var-type (var-type v))
       (update-in [:ns] ns-name)
       (dissoc-keys (:exclude-keys options))
+      (as-> m
+            (cond-> m
+                    (:sig m) (update-in [:sig] explain-sig)))
       (extract-data v)))
 
 (defn protocol-with-methods
