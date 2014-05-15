@@ -57,18 +57,25 @@
 (defmethod extract-data :protocol
   [m v] (assoc m :var v))
 
+(defn- dissoc-keys
+  [m ks]
+  (apply dissoc m ks))
+
 (defn var-data
   "Return documentation data for a var."
-  [v]
+  [v options]
   (-> (meta v)
       (assoc :var-type (var-type v))
       (update-in [:ns] ns-name)
+      (dissoc-keys (:exclude-keys options))
       (extract-data v)))
 
 (defn protocol-with-methods
   [protocol methods]
   (-> protocol
-      (assoc :methods (filter #(= (:var protocol) (:protocol %)) methods))
+      (assoc :methods (->> methods
+                           (filter #(= (:var protocol) (:protocol %)))
+                           (map #(dissoc % :protocol))))
       (dissoc :var)))
 
 (defn protocols-with-methods
@@ -77,8 +84,8 @@
 
 (defn ns-var-data
   "Return a sequence of data on each var in the namespace `n`."
-  [n]
-  (let [vs (->> (ns-interns n) vals (map var-data))]
+  [n options]
+  (let [vs (->> (ns-interns n) vals (map #(var-data % options)))]
     (concat
      (remove (comp #{:protocol-method :protocol :proxy} :var-type) vs)
      (protocols-with-methods
@@ -87,17 +94,17 @@
 
 (defn ns-data
   "Return data on a namespace."
-  [ns-sym]
+  [ns-sym options]
   (let [n (the-ns ns-sym)]
     (-> n
         meta
         (assoc :ns-name ns-sym
-               :vars (ns-var-data n)))))
+               :vars (ns-var-data n options)))))
 
 (defn docudata
   "Return documentation data on a namespaces in the filesystem `paths`."
-  [paths]
+  [paths options]
   (->> paths
        clj-namespaces
        (map require-ns)
-       (map ns-data)))
+       (map #(ns-data % options))))

@@ -16,11 +16,16 @@ project.
 
 ## Configuration
 
-The `:docudata` profile is automatically added by the `docudata` task,
-and can be used to customise the output file path using the
-`:output-file` key (defaults to `target/docudata.edn`) and input
-source paths using the `:source-paths` key (defaults to your projects
-`:source-paths`).
+The `:docudata` key can be passed a map to configure docudata.
+
+To customise the output file path, use the `:output-file` key
+(defaults to `target/docudata.edn`).  For the  input source paths use the
+`:source-paths` key (defaults to your projects `:source-paths`).
+
+Use the `:exclude-keywords` key to specify a sequence of keywords to
+remove from the var metadata.
+
+The `:docudata` profile is automatically added by the `docudata` task.
 
 ## License
 
