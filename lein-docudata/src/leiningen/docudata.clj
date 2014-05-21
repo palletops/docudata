@@ -25,7 +25,7 @@
         project (-> project
                     (unmerge-profiles [:default])
                     (add-profiles profiles)
-                    (merge-profiles [::docudata]))]
+                    (merge-profiles [:provided ::docudata]))]
     (eval-in-project
      project
      `(com.palletops.docudata/generate
