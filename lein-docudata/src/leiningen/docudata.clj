@@ -7,13 +7,14 @@
 
 (def profiles
   {::docudata
-   {:dependencies [['com.palletops/docudata "0.1.0-SNAPSHOT"]]}})
+   {:dependencies [['com.palletops/docudata "0.1.1-SNAPSHOT"]]}})
 
 (defn docudata-options
   [project]
   (merge
    {:output-file (str (file (:target-path project) "docudata.edn"))
-    :source-paths (:source-paths project)}
+    :source-paths (:source-paths project)
+    :root (:root project)}
    (:docudata project)))
 
 (defn docudata
@@ -25,7 +26,7 @@
         project (-> project
                     (unmerge-profiles [:default])
                     (add-profiles profiles)
-                    (merge-profiles [::docudata]))]
+                    (merge-profiles [:provided ::docudata]))]
     (eval-in-project
      project
      `(com.palletops.docudata/generate

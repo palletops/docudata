@@ -1,8 +1,13 @@
 (ns com.palletops.docudata.extract
   "Extract documentation data from code."
   (:require
+   [bultitude.core :as bultitude]
+   [clojure.edn :as edn]
    [clojure.java.io :refer [file]]
-   [bultitude.core :as bultitude])
+   [clojure.string :refer [split-lines triml]]
+   [me.raynes.fs :as fs]
+   [scout.core :as scout]
+   [pathetic.core :as path])
   (:import
    java.io.File))
 
@@ -119,6 +124,109 @@
         meta
         (assoc :ns-name ns-sym
                :vars (ns-var-data n options)))))
+
+;;; extract snippets
+
+(defn all-files
+  "returns a list of all the files in the directory"
+  [root]
+  ;; TODO: need to remove target and other useless subdirs
+  (filter fs/file?
+          (fs/find-files root #".*")))
+
+(defrecord MarkerStart [name])
+
+(defn trim-indent
+  "Given the string `s` potentially containing many lines, some with
+  indentation, it trims the letf side of the text while preserving its
+  indentation"
+  [s]
+  (let [lines (split-lines s)
+        indent (fn [c]
+                 (let [len-trimmed (count (triml c))
+                       len (count c)]
+                   (- len len-trimmed)))
+        lowest-indent (apply min (map indent lines))]
+    (apply str (interpose "\n" (map #(subs % lowest-indent) lines)))))
+
+(defn splice
+  "Given two matches, `statt-match` and `end-match` provided by scout,
+  it returns a snipet map for the content between those two matches"
+  [start-match end-match]
+  (let [source (:src start-match)
+        start-start-marker (-> start-match :match :start)
+        end-start-marker (-> start-match :match :end)
+        end-end-marker (+ end-start-marker
+                          (-> end-match :match :end))
+        snippet (subs source start-start-marker end-end-marker)
+        _ (printf "Snippet:\n%s\n" snippet)
+        snippet-lines (split-lines snippet)
+        header (try (edn/read-string {:readers {'dd/start #'->MarkerStart}}
+                                     (first snippet-lines))
+                    (catch Exception e
+                      (printf "Can't parse marker '%s'\n" (first snippet-lines))
+                      nil))
+        snippet (apply str (interpose \newline (rest (butlast snippet-lines))))]
+    (when header
+      {:name (keyword (:name header))
+       :content (trim-indent snippet)})))
+
+(defn next-snippet
+  "Given a string, it parses the next snippet, returning a vector with
+  the rest of the string after the parsed snippet, and the snippet
+  map"
+  [s]
+  (let [start (-> s
+                  (scout/scanner)
+                  (scout/scan-until #"\#dd/start"))
+        end (-> start
+                (scout/remainder)
+                (scout/scanner)
+                (scout/scan-until #"\#dd/end"))]
+    ;; full match? -> splice
+    (if (and (-> start :match)
+             (-> end :match))
+      [(subs s (-> end :match :end)) (splice start end)]
+      (if (-> start :match)
+        ;; unbalanced markers
+        (throw (Exception. (format "unmatched: '%s'\n" s)))
+        ;; [nil nil]
+        ;; no markers left
+        [nil nil]))))
+
+(defn all-snippets
+  "Returns a sequence with the maps for the snippets found in the
+  string `s`"
+  ([s] (all-snippets s []))
+  ([s snippets]
+     (if (> (count s) 0)
+       ;; only continue if there is some content left
+       (let [[r snippet] (next-snippet s)]
+         (if snippet
+           (all-snippets r (conj snippets snippet))
+           snippets)))))
+
+(defn snippets-in-path
+  "Returns a map of all the snippets found in a path. Each snippet is
+  keyed by its name and is a map of `:content` and `:file`, the
+  snippet content and the relative path to the file (from the project
+  root) respectively"
+  [dir]
+  (let [collect-snippets
+        (fn [current-snippets f]
+          (let [content (try (slurp f)
+                             (catch Exception e
+                               (printf "Cannot read %s. Ignoring it.\n" f)
+                               nil))
+                snippets (all-snippets content)
+                rel-path (path/relativize dir f)
+                ;; add the file path to all snippet maps
+                snippets (map #(assoc % :path rel-path) snippets)
+                snippets-map (reduce (fn [sm m] (assoc sm
+                                                 (:name m)
+                                                 (dissoc m :name))) {} snippets)]
+            (merge current-snippets snippets-map)))]
+    (reduce collect-snippets {} (all-files dir))))
 
 (defn docudata
   "Return documentation data on a namespaces in the filesystem `paths`."
