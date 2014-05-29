@@ -78,21 +78,36 @@
            (mapv (fn [x]
                    (if (= x ':-)
                      x
-                     (@schema-explain x)))
+                     (try (@schema-explain x)
+                          (catch Exception e
+                            (throw
+                             (ex-info
+                              (str "Failed to explain signature for "
+                                   (pr-str x))
+                              {:sig sig}
+                              e))))))
                  s))
          sig)))
 
 (defn var-data
   "Return documentation data for a var."
   [v options]
-  (-> (meta v)
-      (assoc :var-type (var-type v))
-      (update-in [:ns] ns-name)
-      (dissoc-keys (:exclude-keys options))
-      (as-> m
-            (cond-> m
-                    (:sig m) (update-in [:sig] explain-sig)))
-      (extract-data v)))
+  (try
+    (-> (meta v)
+        (assoc :var-type (var-type v))
+        (update-in [:ns] ns-name)
+        (dissoc-keys (:exclude-keys options))
+        (as-> m
+              (cond-> m
+                      (:sig m) (update-in [:sig] explain-sig)))
+        (extract-data v))
+    (catch Exception e
+      (throw (ex-info
+              (str "Failed to extract "
+                   (ns-name (the-ns (:ns (meta v)))) "/"
+                   (:name (meta v)))
+              {:v (meta v)}
+              e)))))
 
 (defn protocol-with-methods
   [protocol methods]
