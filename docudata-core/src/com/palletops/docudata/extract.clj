@@ -116,7 +116,7 @@
       (filter (comp #{:protocol} :var-type) vs)
       (filter (comp #{:protocol-method} :var-type) vs)))))
 
-(defn ns-data
+#_(defn ns-data
   "Return data on a namespace."
   [ns-sym options]
   (let [n (the-ns ns-sym)]
@@ -124,6 +124,19 @@
         meta
         (assoc :ns-name ns-sym
                :vars (ns-var-data n options)))))
+
+(defn ns-data
+  "Return data on a namespace."
+  [ns-sym options]
+  (let [n (the-ns ns-sym)]
+    (-> n
+        meta
+        (assoc :ns-name ns-sym))))
+
+(defn ns-vars [ns-sym options]
+  (let [n (the-ns ns-sym)]
+    (map #(assoc % :ns-name ns-sym)
+        (ns-var-data n options))))
 
 ;;; extract snippets
 
@@ -235,3 +248,15 @@
        clj-namespaces
        (map require-ns)
        (map #(ns-data % options))))
+
+(defn namespaces [paths options]
+  (->> paths
+       clj-namespaces
+       (map require-ns)
+       (map #(ns-data % options))))
+
+(defn vars [paths options]
+  (->> paths
+       clj-namespaces
+       (map require-ns)
+       (mapcat #(ns-vars % options))))
